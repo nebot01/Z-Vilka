@@ -7,7 +7,8 @@ local Selects = {
     {Title = "return", Func = function(luaMenu) luaMenu:Close() end},
     {Title = "main menu", Func = function(luaMenu) gui.ActivateGameUI() luaMenu:Close() end},
     {Title = "settings", Func = function(luaMenu) luaMenu:SwitchToSettings() end},
-    {Title = "discord", Func = function(luaMenu) luaMenu:Close() gui.OpenURL("https://discord.gg/ZXUCAwuke2")  end},
+    {Title = "Z-Вилка", Func = function(luaMenu) luaMenu:Close() gui.OpenURL("https://discord.gg/h29UUhwPFZ")  end},
+    {Title = "Lapse", Func = function(luaMenu) luaMenu:Close() gui.OpenURL("https://discord.gg/ZXUCAwuke2")  end},
     {Title = "achievements", Func = function(luaMenu) luaMenu:SwitchToAchievements() end},
     {Title = "skins", ShouldShow = function() return hg and hg.skins and hg.skins.HasAnySkins and hg.skins.HasAnySkins() end, Func = function(luaMenu) luaMenu:OpenSkinsPanel() end},
     {Title = "appearance", Func = function(luaMenu) luaMenu:SwitchToAppearance() end},
@@ -53,6 +54,12 @@ local Selects = {
         end)
     end},
 }
+surface.CreateFont("ZCity_nikker", {
+    font = "Veteran Typewriter",
+    size = ScreenScaleH(12),
+    weight = 500,
+    antialias = true
+})
 
 surface.CreateFont("ZCity_Veteran", {
     font = "Veteran Typewriter",
@@ -290,7 +297,7 @@ function PANEL:Init()
     self.LogoY = ScreenScaleH(20)
     
     surface.SetFont("ZC_MM_Title")
-    local _, th = surface.GetTextSize("meleecity: delicacy")
+    local _, th = surface.GetTextSize("Z-Вилка")
     self.LogoH = th
 
     self.MenuTop = self.LogoY + self.LogoH + ScreenScaleH(60)
@@ -2870,7 +2877,8 @@ function PANEL:Paint(w,h)
     end
     
     -- Title Transition Logic
-    local text1 = "meleecity: delicacy"
+    local mainTitleText = "Z-Вилка"
+    local subTitleText = "(meleecity delicacy)"
     
     surface.SetFont("ZC_MM_Title")
     
@@ -2915,7 +2923,16 @@ function PANEL:Paint(w,h)
     end
 
     surface.SetTextPos(self.LogoX + textShakeX, titleY + textShakeY)
-    surface.DrawText(text1)
+    surface.DrawText(mainTitleText)
+
+    -- Subtitle
+    local subTitleColor = Color(100, 100, 100, 150)
+    local subTitleX = self.LogoX + textShakeX - ScreenScale(-10)
+    local subTitleY = titleY + textShakeY + self.LogoH - ScreenScaleH(7)
+    local subShakeX = math.random(-1, 1)
+    local subShakeY = math.random(-1, 1)
+
+    draw.SimpleText(subTitleText, "ZCity_nikker", subTitleX + subShakeX, subTitleY + subShakeY, subTitleColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     
     if self.IsIntro then
         local enterText = "press enter"
@@ -2987,6 +3004,7 @@ function PANEL:AddSelect( pParent, strTitle, tbl )
     btn.HoveredFunc = tbl.HoveredFunc
     local luaMenu = self 
     if tbl.ShouldShow then
+        btn.HoveredLerp = 0
         btn.ShouldShow = function()
             return tbl.ShouldShow(luaMenu)
         end
@@ -3030,20 +3048,23 @@ function PANEL:AddSelect( pParent, strTitle, tbl )
         local tw, th = surface.GetTextSize(text)
         
         -- Add padding to width for border
-        local padding = ScreenScale(4)
-        local totalW = tw + padding * 2
+        local padding = ScreenScale(4)        
 
         if self:IsHovered() then
             if not self.HoveredSoundPlayed then
                 sound.PlayFile("sound/hover.ogg", "noblock", function(station) if IsValid(station) then station:Play() end end)
                 self.HoveredSoundPlayed = true
             end
+
+            if not self.HoveredLerp then
+                self.HoveredLerp = 0
+            end
             
             local alpha = 255
             if math.random() > 0.9 then alpha = math.random(50, 200) end
             
             surface.SetDrawColor(255, 255, 255, alpha)
-            surface.DrawRect(0, 0, totalW, h)
+            surface.DrawRect(0, 0, (tw + padding * 2) * self.HoverLerp, h)
             self:SetTextColor(Color(0, 0, 0, alpha))
         else
             self.HoveredSoundPlayed = false
