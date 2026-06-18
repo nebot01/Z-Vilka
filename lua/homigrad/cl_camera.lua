@@ -1,3 +1,16 @@
+surface.CreateFont("watermark", {
+	font = "Arial",
+	size = 12,
+	weight = 400,
+	antialias = true,
+})
+surface.CreateFont("oneplayer", {
+	font = "Arial",
+	size = 26,
+	weight = 700,
+	antialias = true,
+})
+
 local view = render.GetViewSetup()
 local whitelist = {
 	weapon_physgun = true,
@@ -816,3 +829,94 @@ end )
 --hook.Add( "PreDrawOpaqueRenderables", "FPS_Fog", function( bDepth, bSkybox )
 --	--DrawFog(bDepth, bSkybox)
 --end )
+
+hook.Add("HUDPaint", "watermark", function()
+	draw.SimpleText("Z-Вилка | commit 1", "Default", ScrW() - 10, ScrH() - 10, Color(255, 255, 255, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+end)
+
+hook.Add("HUDPaint", "TwoPlayerWarning", function()
+    if player.GetCount() < 2 then
+        draw.SimpleText("This gamemode needs 2 players to start", "oneplayer", ScrW() / 2, 10, Color(255, 255, 255, 180), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+        draw.SimpleText("(Bot is not a human)", "oneplayer", ScrW() / 2, 40, Color(255, 255, 255, 180), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP) 
+    end
+end)
+
+local angleZero = Angle(0,0,0)
+local torsoOld
+local turnSwayLerp = 0
+local strafeSwayLerp = 0
+
+function hg.cam_things(ply, view, angles)
+    local wep = ply:GetActiveWeapon()
+    local eyeAngs = ply:EyeAngles()
+    eyeAngs[3] = 0
+    local oldviewa = oldview or view
+    local ent = hg.GetCurrentCharacter(ply)
+    if not ent:LookupBone("ValveBiped.Bip01_Spine") then return end
+    if not ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_Spine")) then return end
+    local torso = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_Spine")):GetAngles()
+    oldviewa = not ply:Alive() and view or oldviewa
+    
+    local different, _ = WorldToLocal(eyeAngs:Forward(), angle_zero, (eyeAnglesOld or eyeAngs):Forward(), angle_zero)
+    local different2, _ = WorldToLocal(torso:Forward(), angle_zero, (torsoOld or torso):Forward(), angle_zero)
+    local _, localAng = WorldToLocal(vector_origin, eyeAngs, vector_origin, eyeAnglesOld or eyeAngs)
+
+    torsoOld = torso
+
+    local fthuy = ftlerped * 150 * game.GetTimeScale()
+    fthuy = math.max(0.0001, fthuy) 
+    
+    angle_difference_localvec = LerpVectorFT(0.08, angle_difference_localvec, -different / (fthuy))
+    angle_difference_localvec2 = LerpVectorFT(0.08, angle_difference_localvec2, -different2 / (fthuy))
+    angle_difference = LerpAngleFT(0.08, angle_difference, localAng * 2 / (fthuy))
+    angle_difference2 = LerpAngleFT(0.1, angle_difference2, localAng * 2 / (fthuy))
+    local vela = -(hg.GetCurrentCharacter(ply):GetVelocity() / 50)
+    position_difference = LerpVectorFT(0.15, position_difference, vela)
+    position_difference2 = LerpVectorFT(0.05, position_difference2, vela)
+    position_difference23 = ply:EyeAngles():Right() * math.Clamp(position_difference2:Dot(ply:EyeAngles():Right()), -4, 4) + ply:EyeAngles():Up() * math.Clamp(position_difference2:Dot(ply:EyeAngles():Up()), -4, 4)
+
+    table.CopyFromTo(view, oldview)
+
+    position_difference3[1] = 0
+    position_difference3[3] = 0
+    position_difference3[2] = position_difference:Dot(eyeAngs:Right())
+    
+    hg.clamp(position_difference, 2)
+    hg.clamp(position_difference3, 5)
+    hg.clamp(angle_difference_localvec, 10)
+    hg.clamp(angle_difference, 10)
+    hg.clamp(angle_difference2, 10)
+    
+    if not hg.KeyDown(ply, IN_SPEED) then
+        offsetView[1] = math_Clamp(offsetView[1] - angle_difference2[1] / 18, -2, 2)
+        offsetView[2] = math_Clamp(offsetView[2] - angle_difference2[2] / 18, -4, 4)
+    end
+
+    offsetView = LerpFT(0.001,offsetView,angleZero)
+
+    local turnSpeed = localAng[2] / math.max(FrameTime(), 0.001)
+    turnSpeed = math.Clamp(turnSpeed, -350, 350)
+    
+    local targetRoll = -turnSpeed * 0.025
+    turnSwayLerp = LerpFT(0.22, turnSwayLerp, targetRoll)
+
+    local targetStrafe = 0
+    if hg.KeyDown(ply, IN_MOVELEFT) then
+        targetStrafe = 2.5
+     Surrey = hg.KeyDown(ply, IN_MOVERIGHT) and -2.5 or targetStrafe
+    elseif hg.KeyDown(ply, IN_MOVERIGHT) then
+        targetStrafe = -2.5
+    end
+    
+    if not ply:OnGround() or ply:GetVelocity():LengthSqr() < 500 then
+        targetStrafe = 0
+    end
+    
+    strafeSwayLerp = LerpFT(0.12, strafeSwayLerp, targetStrafe)
+
+    eyeAnglesOld = eyeAngs
+    local position_differencedot = position_difference:Dot(angles:Right()) * 2
+    
+    angles[3] = angles[3] - angle_difference[2] * 0.5 + turnSwayLerp + strafeSwayLerp
+    angles[3] = angles[3] - (lean_lerp or 0) * hg_leancam_mul:GetInt()
+end
