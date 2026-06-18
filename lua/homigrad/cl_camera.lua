@@ -831,7 +831,7 @@ end )
 --end )
 
 hook.Add("HUDPaint", "watermark", function()
-	draw.SimpleText("Z-Вилка | commit 1", "Default", ScrW() - 10, ScrH() - 10, Color(255, 255, 255, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+	draw.SimpleText("Z-Вилка | commit 3", "Default", ScrW() - 10, ScrH() - 10, Color(255, 255, 255, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
 end)
 
 hook.Add("HUDPaint", "TwoPlayerWarning", function()
